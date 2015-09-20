@@ -8,11 +8,15 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"log"
+	"strconv"
 
-	"github.com/julienschmidt/httprouter"
 )
 
-// curl -X PUT http://localhost:8000/test -d '{"3": ["10", "11"]}'
+// possible usage with requests: 
+// In [81]: r = requests.put("http://localhost:8000/update", data='{"3": ["12", "14"]}')
+
+// In [83]: r = requests.get("http://localhost:8000/get_recs", params={"UserId": "3", "NRecs": 3})
+
 
 type Recommender struct {
 	item_id_to_col map[string]int
@@ -21,7 +25,7 @@ type Recommender struct {
 	user_id_to_actions map[string][]string 
 }
 
-func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request) {
 
 
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
@@ -29,8 +33,8 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 		panic(err)
 	}
 
-	fmt.Println("Printing")
-	fmt.Println(body)
+	log.Println("Printing")
+	log.Println(body)
 
 	if err := r.Body.Close(); err != nil {
 		panic(err)
@@ -54,36 +58,31 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 	}
 }
 
-func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	// user_id, and n_recs 
-	// one is int one is string need special type 
+func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
 
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+	// parsing input 
+	err := r.ParseForm()
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Printing")
-	fmt.Println(body)
-	fmt.Println(string(body))
+	log.Println(r.Form)
 
-	if err := r.Body.Close(); err != nil {
-		panic(err)
-	}
+	user_id := r.Form["UserId"][0]
+	n_recs_str := r.Form["NRecs"][0]
 
-	rec_info := RecInfo{}
-
-	err = json.Unmarshal(body, &rec_info)
+	n_recs, err := strconv.Atoi(n_recs_str)
 
 	if err != nil {
 		panic(err)
 	}
+
 	// done parsing input
 	scores := make([]float64, len(recommender.item_id_to_col))
-	user_actions, _ := recommender.user_id_to_actions[rec_info.UserId]
-	// if ok != true {
-	// 	user_actions := []string {}
-	// }
+	user_actions, _ := recommender.user_id_to_actions[user_id]
+
+	log.Println("User Actions")
+	log.Println(user_actions)
 
 	for _, action := range user_actions {
 		for i := 0; i < len(recommender.item_id_to_col); i++ {
@@ -96,7 +95,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	fmt.Println(item_rankings)
 
 	recs := []string {}
-	for i := 0; i < rec_info.NRecs; i++ {
+	for i := 0; i < n_recs; i++ {
 		recs = append(recs, recommender.col_to_item_id[item_rankings[i]])
 	}
 
@@ -105,15 +104,13 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	log.Println(recs_json)
 
 	
-	fmt.Fprint(w, recs_json)
+	fmt.Fprint(w, string(recs_json))
 
-	// return recs  
+	
 }
 
 func main() {
 	fmt.Println("Hello")
-
-	r := httprouter.New()
 
 	const n_items = 5;
 
@@ -128,56 +125,10 @@ func main() {
 	recommender.similarity = make_sim_matrix(n_items)
 	recommender.user_id_to_actions = make_user_id_to_actions()
 
-	fmt.Println(recommender.item_id_to_col)
-	fmt.Println(recommender.col_to_item_id)
-	fmt.Println(recommender.similarity)
-	fmt.Println(recommender.user_id_to_actions)
-
-	// greg_recs := make_recs(similarity, item_id_to_col, col_to_item_id, user_id_to_actions["greg"], 3)
-	// fmt.Println("Gregs recs: ", greg_recs)
-
-	// emily_recs := make_recs(similarity, item_id_to_col, col_to_item_id, user_id_to_actions["emily"], 3)
-	// fmt.Println("Emily recs: ", emily_recs)
-
-	r.GET("/test", recommender.make_recs)
-	r.PUT("/test", recommender.update_user_id_to_actions)
-
+	http.HandleFunc("/update", recommender.update_user_id_to_actions)
+	http.HandleFunc("/get_recs", recommender.make_recs)
+	http.ListenAndServe("localhost:8000", nil)
 	
-	http.ListenAndServe("localhost:8000", r)
-	
-}
-
-// func serve_rest(w http.ResponseWriter, r *http.Request) {
-// 	err := r.ParseForm()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	user_id, := strconv.Atoi(r.Form["user_id"][0])
-// 	log.Printf("Generating recs for user_id: %d", user_id)
-// 	// How do I pass use my data structures here?
-// 	// I could create globals? 
-// 	fmt.Fprintf(w, recs_string)
-// }
-
-func make_recs(similarity [][]float64, item_id_to_col map[string]int, col_to_item_id map[int]string, user_actions []string, n_recs int) []string {
-	scores := make([]float64, len(item_id_to_col))
-	for _, action := range user_actions {
-		for i := 0; i < len(item_id_to_col); i++ {
-			scores[i] += similarity[item_id_to_col[action]][i]
-		}
-	}
-
-	fmt.Println(scores)
-	item_rankings := argsort(scores)
-	fmt.Println(item_rankings)
-
-	recs := []string {}
-	for i := 0; i < n_recs; i++ {
-		recs = append(recs, col_to_item_id[item_rankings[i]])
-	}
-
-	return recs  
 }
 
 func make_sim_matrix(n_items int) [][]float64 {
@@ -231,10 +182,5 @@ func argsort(scores []float64) []int {
 	sort.Sort(SortByOther(my_two_slices))
 	return my_two_slices.indices
 
-}
-
-type RecInfo struct {
-        UserId string
-        NRecs int 
 }
 
