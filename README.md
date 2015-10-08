@@ -21,3 +21,9 @@ In [96]: r.content
 Out[96]: '["14","10","11"]'
 ```
 
+To run unit test, go to /utilities:
+
+```
+go test
+```
+
