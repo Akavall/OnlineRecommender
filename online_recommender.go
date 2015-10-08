@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"io"
 	"io/ioutil"
 	"encoding/json"
 	"log"
 	"strconv"
+
+	"github.com/Akavall/OnlineRecommender/utilities"
 
 )
 
@@ -91,7 +92,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	}
 
 	fmt.Println(scores)
-	item_rankings := argsort(scores)
+	item_rankings := argsort.Argsort(scores)
 	fmt.Println(item_rankings)
 
 	recs := []string {}
@@ -153,34 +154,34 @@ func make_user_id_to_actions() map[string][]string {
 }
 
 // This should be in a different file
-type TwoSlices struct {
-	indices  []int
-	scores  []float64
-}
+// type TwoSlices struct {
+// 	indices  []int
+// 	scores  []float64
+// }
 
-type SortByOther TwoSlices
+// type SortByOther TwoSlices
 
-func (sbo SortByOther) Len() int {
-	return len(sbo.indices)
-}
+// func (sbo SortByOther) Len() int {
+// 	return len(sbo.indices)
+// }
 
-func (sbo SortByOther) Swap(i, j int) {
-	sbo.indices[i], sbo.indices[j] = sbo.indices[j], sbo.indices[i]
-	sbo.scores[i], sbo.scores[j] = sbo.scores[j], sbo.scores[i]
-}
+// func (sbo SortByOther) Swap(i, j int) {
+// 	sbo.indices[i], sbo.indices[j] = sbo.indices[j], sbo.indices[i]
+// 	sbo.scores[i], sbo.scores[j] = sbo.scores[j], sbo.scores[i]
+// }
 
-func (sbo SortByOther) Less(i, j int) bool {
-	return sbo.scores[i] > sbo.scores[j] 
-}
+// func (sbo SortByOther) Less(i, j int) bool {
+// 	return sbo.scores[i] > sbo.scores[j] 
+// }
 
-func argsort(scores []float64) []int {
-	indices := make([]int, len(scores))
-	for i := 0; i < len(scores); i++ {
-		indices[i] = i
-	}
-	my_two_slices := TwoSlices{indices: indices, scores: scores}
-	sort.Sort(SortByOther(my_two_slices))
-	return my_two_slices.indices
+// func argsort(scores []float64) []int {
+// 	indices := make([]int, len(scores))
+// 	for i := 0; i < len(scores); i++ {
+// 		indices[i] = i
+// 	}
+// 	my_two_slices := TwoSlices{indices: indices, scores: scores}
+// 	sort.Sort(SortByOther(my_two_slices))
+// 	return my_two_slices.indices
 
-}
+// }
 
