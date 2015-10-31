@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
-	"time"
+	// "time"
 	"runtime"
 
 	"github.com/Akavall/OnlineRecommender/utilities"
@@ -62,16 +62,16 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 }
 
 func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
-	time.Sleep(3 * 1000 * 1000 * 1000)
+	// time.Sleep(3 * 1000 * 1000 * 1000)
 
-	silly := 0
-	for i := 0; i < 500000; i++ {
-		for j := 0; j < 100000; j++ {
-			silly += (i + j)
-		}
-	}
+	// silly := 0
+	// for i := 0; i < 500000; i++ {
+	// 	for j := 0; j < 100000; j++ {
+	// 		silly += (i + j)
+	// 	}
+	// }
 
-	log.Println(silly)
+	// log.Println(silly)
 
 	// parsing input 
 	err := r.ParseForm()
@@ -128,16 +128,26 @@ func main() {
 
 	const n_items = 5;
 
+	// We need to load: 
+	// 1) item_id_to_col
+	// 2) similarity
+	// 3) user_id_to_actions
+
+	// 4) item_id_to_name (for transparency)
+
+	base := "/home/kirill/GoStuff/src/github.com/Akavall/OnlineRecommender"
+
 	recommender := Recommender{}
-	recommender.item_id_to_col = map[string]int {"10": 0, "11": 1, "12": 2, "13": 3, "14": 4}
+	recommender.item_id_to_col = load_item_id_to_col(base + "/sample_data/item_id_to_col.json")
 	col_to_item_id := map[int]string {}
 	for k, v := range recommender.item_id_to_col {
 		col_to_item_id[v] = k
 	}
 	recommender.col_to_item_id = col_to_item_id
 
-	recommender.similarity = make_sim_matrix(n_items)
-	recommender.user_id_to_actions = make_user_id_to_actions()
+
+	recommender.similarity = load_sim_matrix(base + "/sample_data/similarity.json")
+	recommender.user_id_to_actions = load_user_id_to_actions(base + "/sample_data/user_id_to_actions.json")
 
 	http.HandleFunc("/update", recommender.update_user_id_to_actions)
 	http.HandleFunc("/get_recs", recommender.make_recs)
@@ -145,23 +155,39 @@ func main() {
 	
 }
 
-func make_sim_matrix(n_items int) [][]float64 {
-	similarity := make([][]float64, n_items)
-	for i := 0; i < n_items; i++ {
-		similarity[i] = make([]float64, 5)
-	}
-	
-	similarity[2][3] = 0.5
-	similarity[3][2] = 0.5
-	similarity[1][4] = 0.3
-	similarity[4][1] = 0.3
+func load_item_id_to_col(file_address string) map[string]int {
+	item_id_to_col := map[string]int {}
 
-	return similarity
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+
+	json.Unmarshal(f, &item_id_to_col)
+	return item_id_to_col
 }
 
-func make_user_id_to_actions() map[string][]string {
-	user_id_to_actions := make(map[string][]string)
-	user_id_to_actions["greg"] = []string {"12",}
-	user_id_to_actions["emily"] = []string {"12","14",}
+func load_sim_matrix(file_address string) [][]float64 {
+	sim_matrix := [][]float64 {}
+
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+
+	json.Unmarshal(f, &sim_matrix)
+	return sim_matrix 
+}
+
+func load_user_id_to_actions(file_address string) map[string][]string {
+
+	user_id_to_actions := map[string][]string {}
+
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+	
+	json.Unmarshal(f, &user_id_to_actions)
 	return user_id_to_actions
 }
