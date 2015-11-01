@@ -63,18 +63,8 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 }
 
 func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
-	// time.Sleep(3 * 1000 * 1000 * 1000)
 
-	// silly := 0
-	// for i := 0; i < 500000; i++ {
-	// 	for j := 0; j < 100000; j++ {
-	// 		silly += (i + j)
-	// 	}
-	// }
-
-	// log.Println(silly)
-
-	// parsing input 
+	// started parsing input 
 	err := r.ParseForm()
 	if err != nil {
 		panic(err)
@@ -90,13 +80,10 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		panic(err)
 	}
-
 	// done parsing input
+
 	scores := make([]float64, len(recommender.item_id_to_col))
 	user_actions, _ := recommender.user_id_to_actions[user_id]
-
-	log.Println("User Actions")
-	log.Println(user_actions)
 
 	for _, action := range user_actions {
 		for i := 0; i < len(recommender.item_id_to_col); i++ {
@@ -104,10 +91,8 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	fmt.Println(scores)
 	item_rankings := argsort.Argsort(scores)
-	fmt.Println(item_rankings)
-
+	
 	recs := []string {}
 	for i := 0; i < n_recs; i++ {
 		recs = append(recs, recommender.col_to_item_id[item_rankings[i]])
@@ -115,6 +100,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	recs_json, _ := json.Marshal(recs)
 
+	log.Printf("Recommendations for user: %d", user_id)
 	log.Println(recs_json)
 
 	

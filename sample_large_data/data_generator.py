@@ -2,10 +2,9 @@ import json
 import numpy as np
 import random as rn 
 
-# 200 items
-# 100 users, number of user is not important 
+N_ITEMS = 500
 
-ITEM_IDS = map(str, xrange(1000, 2000))
+ITEM_IDS = map(str, xrange(1000, 1000+N_ITEMS))
 
 def make_item_id_to_col():
     item_id_to_col = {item_id: col for col, item_id in enumerate(ITEM_IDS)}
@@ -13,7 +12,7 @@ def make_item_id_to_col():
         json.dump(item_id_to_col, f)
 
 def make_sim_matrix():
-    temp = np.random.uniform(0,1, (500, 500))
+    temp = np.random.uniform(0,1, (N_ITEMS, N_ITEMS))
     # creates symmetrical matrix with diagonal 0 of zeros 
     sim = np.tril(temp, -1) + np.tril(temp, -1).T
     with open("similarity.json", "w") as f:
@@ -21,7 +20,7 @@ def make_sim_matrix():
 
 def make_user_id_to_actions():
     user_to_actions = {}
-    for i in xrange(100000, 1000100):
+    for i in xrange(1000000, 1000100):
         user_to_actions[str(i)] = rn.sample(ITEM_IDS, 50)
     with open("user_id_to_actions.json", "w") as f:
         json.dump(user_to_actions, f)
