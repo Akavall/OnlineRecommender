@@ -125,7 +125,7 @@ func main() {
 	runtime.GOMAXPROCS(4)
 	folder := os.Args[1]
 
-	log.Println("using data from: %s", folder)
+	log.Printf("using data from: %s\n", folder)
 
 	recommender := Recommender{}
 	recommender.item_id_to_col = load_item_id_to_col(fmt.Sprintf("./%s/item_id_to_col.json", folder))
