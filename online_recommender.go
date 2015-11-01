@@ -10,6 +10,7 @@ import (
 	"strconv"
 	// "time"
 	"runtime"
+	"os"
 
 	"github.com/Akavall/OnlineRecommender/utilities"
 
@@ -118,15 +119,11 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	
 	fmt.Fprint(w, string(recs_json))
-
-	
 }
 
 func main() {
 	fmt.Println("Hello")
 	runtime.GOMAXPROCS(4)
-
-	const n_items = 5;
 
 	// We need to load: 
 	// 1) item_id_to_col
@@ -135,19 +132,24 @@ func main() {
 
 	// 4) item_id_to_name (for transparency)
 
-	base := "/home/kirill/GoStuff/src/github.com/Akavall/OnlineRecommender"
+	// base := "/home/kirill/GoStuff/src/github.com/Akavall/OnlineRecommender"
+	// base := "."
+
+
+	folder := os.Args[1]
+
+	log.Println("using data from: %s", folder)
 
 	recommender := Recommender{}
-	recommender.item_id_to_col = load_item_id_to_col(base + "/sample_data/item_id_to_col.json")
+	recommender.item_id_to_col = load_item_id_to_col(fmt.Sprintf("./%s/item_id_to_col.json", folder))
 	col_to_item_id := map[int]string {}
 	for k, v := range recommender.item_id_to_col {
 		col_to_item_id[v] = k
 	}
 	recommender.col_to_item_id = col_to_item_id
 
-
-	recommender.similarity = load_sim_matrix(base + "/sample_data/similarity.json")
-	recommender.user_id_to_actions = load_user_id_to_actions(base + "/sample_data/user_id_to_actions.json")
+	recommender.similarity = load_sim_matrix(fmt.Sprintf("./%s/similarity.json", folder))
+	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
 
 	http.HandleFunc("/update", recommender.update_user_id_to_actions)
 	http.HandleFunc("/get_recs", recommender.make_recs)
