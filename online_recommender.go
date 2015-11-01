@@ -122,20 +122,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 }
 
 func main() {
-	fmt.Println("Hello")
 	runtime.GOMAXPROCS(4)
-
-	// We need to load: 
-	// 1) item_id_to_col
-	// 2) similarity
-	// 3) user_id_to_actions
-
-	// 4) item_id_to_name (for transparency)
-
-	// base := "/home/kirill/GoStuff/src/github.com/Akavall/OnlineRecommender"
-	// base := "."
-
-
 	folder := os.Args[1]
 
 	log.Println("using data from: %s", folder)
