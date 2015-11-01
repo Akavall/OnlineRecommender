@@ -125,7 +125,7 @@ func main() {
 	runtime.GOMAXPROCS(4)
 	folder := os.Args[1]
 
-	log.Printf("using data from: %s\n", folder)
+	log.Printf("Starting to load data from: %s\n", folder)
 
 	recommender := Recommender{}
 	recommender.item_id_to_col = load_item_id_to_col(fmt.Sprintf("./%s/item_id_to_col.json", folder))
@@ -137,6 +137,8 @@ func main() {
 
 	recommender.similarity = load_sim_matrix(fmt.Sprintf("./%s/similarity.json", folder))
 	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
+
+	log.Println("Done loading the data, ready...")
 
 	http.HandleFunc("/update", recommender.update_user_id_to_actions)
 	http.HandleFunc("/get_recs", recommender.make_recs)
