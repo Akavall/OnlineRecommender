@@ -86,8 +86,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	scores := make([]float64, len(recommender.item_id_to_col))
 	user_actions, _ := recommender.user_id_to_actions[user_id]
 
-	log.Println("User Actions")
-	log.Println(user_actions)
+	log.Printf("User Actions : %v\n", user_actions)
 
 	for _, action := range user_actions {
 		for i := 0; i < len(recommender.item_id_to_col); i++ {
@@ -95,9 +94,9 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	fmt.Println(scores)
+	fmt.Printf("scores: %v\n", scores)
 	item_rankings := argsort.Argsort(scores)
-	fmt.Println(item_rankings)
+	fmt.Printf("item_rankings: %v\n", item_rankings)
 
 	recs := []string {}
 	for i := 0; i < n_recs; i++ {
@@ -106,9 +105,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	recs_json, _ := json.Marshal(recs)
 
-	log.Printf("Recommendations for user: %d", user_id)
-	log.Println(recs_json)
-
+	log.Printf("Recommendations for user: %s : %v", user_id, recs)
 	
 	fmt.Fprint(w, string(recs_json))
 
@@ -130,6 +127,18 @@ func main() {
 	recommender.col_to_item_id = col_to_item_id
 
 	recommender.similarity = load_sim_matrix(fmt.Sprintf("./%s/similarity.json", folder))
+
+	fmt.Println("Similarity:")
+	fmt.Printf("   ")
+	for i := 0; i < len(recommender.col_to_item_id); i++ {
+		fmt.Printf("%s ", recommender.col_to_item_id[i])
+	}
+	fmt.Println("")
+	for i, row_sim := range recommender.similarity {
+		fmt.Printf("%s %v\n", recommender.col_to_item_id[i], row_sim)
+	}
+
+
 	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
 
 	log.Println("Done loading the data, ready...")
