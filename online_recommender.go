@@ -8,6 +8,9 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
+	// "time"
+	"runtime"
+	"os"
 
 	"github.com/Akavall/OnlineRecommender/utilities"
 
@@ -61,7 +64,7 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 
 func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
 
-	// parsing input 
+	// started parsing input 
 	err := r.ParseForm()
 	if err != nil {
 		panic(err)
@@ -79,6 +82,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	}
 
 	// done parsing input
+
 	scores := make([]float64, len(recommender.item_id_to_col))
 	user_actions, _ := recommender.user_id_to_actions[user_id]
 
@@ -102,6 +106,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	recs_json, _ := json.Marshal(recs)
 
+	log.Printf("Recommendations for user: %d", user_id)
 	log.Println(recs_json)
 
 	
@@ -111,20 +116,23 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 }
 
 func main() {
-	fmt.Println("Hello")
+	runtime.GOMAXPROCS(4)
+	folder := os.Args[1]
 
-	const n_items = 5;
+	log.Printf("Starting to load data from: %s\n", folder)
 
 	recommender := Recommender{}
-	recommender.item_id_to_col = map[string]int {"10": 0, "11": 1, "12": 2, "13": 3, "14": 4}
+	recommender.item_id_to_col = load_item_id_to_col(fmt.Sprintf("./%s/item_id_to_col.json", folder))
 	col_to_item_id := map[int]string {}
 	for k, v := range recommender.item_id_to_col {
 		col_to_item_id[v] = k
 	}
 	recommender.col_to_item_id = col_to_item_id
 
-	recommender.similarity = make_sim_matrix(n_items)
-	recommender.user_id_to_actions = make_user_id_to_actions()
+	recommender.similarity = load_sim_matrix(fmt.Sprintf("./%s/similarity.json", folder))
+	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
+
+	log.Println("Done loading the data, ready...")
 
 	http.HandleFunc("/update", recommender.update_user_id_to_actions)
 	http.HandleFunc("/get_recs", recommender.make_recs)
@@ -132,23 +140,39 @@ func main() {
 	
 }
 
-func make_sim_matrix(n_items int) [][]float64 {
-	similarity := make([][]float64, n_items)
-	for i := 0; i < n_items; i++ {
-		similarity[i] = make([]float64, 5)
-	}
-	
-	similarity[2][3] = 0.5
-	similarity[3][2] = 0.5
-	similarity[1][4] = 0.3
-	similarity[4][1] = 0.3
+func load_item_id_to_col(file_address string) map[string]int {
+	item_id_to_col := map[string]int {}
 
-	return similarity
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+
+	json.Unmarshal(f, &item_id_to_col)
+	return item_id_to_col
 }
 
-func make_user_id_to_actions() map[string][]string {
-	user_id_to_actions := make(map[string][]string)
-	user_id_to_actions["greg"] = []string {"12",}
-	user_id_to_actions["emily"] = []string {"12","14",}
+func load_sim_matrix(file_address string) [][]float64 {
+	sim_matrix := [][]float64 {}
+
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+
+	json.Unmarshal(f, &sim_matrix)
+	return sim_matrix 
+}
+
+func load_user_id_to_actions(file_address string) map[string][]string {
+
+	user_id_to_actions := map[string][]string {}
+
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+	
+	json.Unmarshal(f, &user_id_to_actions)
 	return user_id_to_actions
 }
