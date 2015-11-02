@@ -27,6 +27,7 @@ type Recommender struct {
 	col_to_item_id map[int]string 
 	similarity [][]float64
 	user_id_to_actions map[string][]string 
+	user_id_to_name map[string]string 
 }
 
 func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request) {
@@ -138,8 +139,9 @@ func main() {
 		fmt.Printf("%s %v\n", recommender.col_to_item_id[i], row_sim)
 	}
 
-
 	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
+
+	recommender.user_id_to_name = load_user_id_to_name(fmt.Sprintf("./%s/item_id_to_name.json", folder))
 
 	log.Println("Done loading the data, ready...")
 
@@ -185,3 +187,17 @@ func load_user_id_to_actions(file_address string) map[string][]string {
 	json.Unmarshal(f, &user_id_to_actions)
 	return user_id_to_actions
 }
+
+func load_user_id_to_name(file_address string) map[string]string {
+
+	user_id_to_actions := map[string]string {}
+
+	f, err := ioutil.ReadFile(file_address)
+	if err != nil {
+		panic(err)
+	}
+	
+	json.Unmarshal(f, &user_id_to_actions)
+	return user_id_to_actions
+}
+
