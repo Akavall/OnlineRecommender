@@ -43,9 +43,6 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 		panic(err)
 	}
 
-	log.Println("Printing")
-	log.Println(body)
-
 	if err := r.Body.Close(); err != nil {
 		panic(err)
 	}
@@ -53,6 +50,8 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 	new_data := map[string][]string {}
 
 	err = json.Unmarshal(body, &new_data)
+
+	log.Printf("%sPut info received:%s %v\n", YELLOW, NO_COLOR, new_data)
 
 	if err != nil {
 		panic(err)
@@ -66,6 +65,7 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 			recommender.user_id_to_actions[k] = v
 		}
 	}
+	log.Printf("%suser_id_to_actions updated %s\n", GREEN, NO_COLOR)
 }
 
 func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
