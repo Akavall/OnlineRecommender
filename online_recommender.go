@@ -16,6 +16,10 @@ import (
 
 )
 
+const GREEN = "\033[0;32m"
+const YELLOW = "\033[0;33m"
+const NO_COLOR = "\033[0m"
+
 // possible usage with requests: 
 // In [81]: r = requests.put("http://localhost:8000/update", data='{"3": ["12", "14"]}')
 
@@ -27,7 +31,8 @@ type Recommender struct {
 	col_to_item_id map[int]string 
 	similarity [][]float64
 	user_id_to_actions map[string][]string 
-	user_id_to_name map[string]string 
+	item_id_to_name map[string]string 
+	
 }
 
 func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request) {
@@ -71,7 +76,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 		panic(err)
 	}
 
-	log.Println(r.Form)
+	log.Printf("%sRequest Parameters:%s %v", YELLOW, NO_COLOR, r.Form)
 
 	user_id := r.Form["UserId"][0]
 	n_recs_str := r.Form["NRecs"][0]
@@ -95,9 +100,9 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	fmt.Printf("scores: %v\n", scores)
+	log.Printf("scores: %v\n", scores)
 	item_rankings := argsort.Argsort(scores)
-	fmt.Printf("item_rankings: %v\n", item_rankings)
+	log.Printf("item_rankings: %v\n", item_rankings)
 
 	recs := []string {}
 	for i := 0; i < n_recs; i++ {
@@ -106,10 +111,15 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	recs_json, _ := json.Marshal(recs)
 
-	log.Printf("Recommendations for user: %s : %v", user_id, recs)
-	
+	log.Printf("%sRecommendations for user: %s%s: %v", YELLOW, user_id, NO_COLOR, recs)
+
+	for _, item_id := range recs {
+		log.Printf("%s", recommender.item_id_to_name[item_id])
+	}
+
 	fmt.Fprint(w, string(recs_json))
 
+	log.Printf("%sRequest completed%s", GREEN, NO_COLOR)
 	
 }
 
@@ -129,7 +139,7 @@ func main() {
 
 	recommender.similarity = load_sim_matrix(fmt.Sprintf("./%s/similarity.json", folder))
 
-	fmt.Println("Similarity:")
+	fmt.Printf("%sSimilarity:%s\n", YELLOW, NO_COLOR)
 	fmt.Printf("   ")
 	for i := 0; i < len(recommender.col_to_item_id); i++ {
 		fmt.Printf("%s ", recommender.col_to_item_id[i])
@@ -141,9 +151,14 @@ func main() {
 
 	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
 
-	recommender.user_id_to_name = load_user_id_to_name(fmt.Sprintf("./%s/item_id_to_name.json", folder))
+	recommender.item_id_to_name = load_item_id_to_name(fmt.Sprintf("./%s/item_id_to_name.json", folder))
 
-	log.Println("Done loading the data, ready...")
+	log.Printf("%sitem_id => name%s\n", YELLOW, NO_COLOR)
+	for k, v := range recommender.item_id_to_name {
+		log.Printf("%s : %s\n", k, v)
+	}
+
+	log.Printf("%sDone loading the data, ready...%s\n", GREEN, NO_COLOR)
 
 	http.HandleFunc("/update", recommender.update_user_id_to_actions)
 	http.HandleFunc("/get_recs", recommender.make_recs)
@@ -188,16 +203,16 @@ func load_user_id_to_actions(file_address string) map[string][]string {
 	return user_id_to_actions
 }
 
-func load_user_id_to_name(file_address string) map[string]string {
+func load_item_id_to_name(file_address string) map[string]string {
 
-	user_id_to_actions := map[string]string {}
+	item_id_to_name := map[string]string {}
 
 	f, err := ioutil.ReadFile(file_address)
 	if err != nil {
 		panic(err)
 	}
 	
-	json.Unmarshal(f, &user_id_to_actions)
-	return user_id_to_actions
+	json.Unmarshal(f, &item_id_to_name)
+	return item_id_to_name
 }
 
