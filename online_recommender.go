@@ -11,6 +11,7 @@ import (
 	// "time"
 	"runtime"
 	"os"
+	"math"
 
 	"github.com/Akavall/OnlineRecommender/utilities"
 
@@ -31,8 +32,10 @@ type Recommender struct {
 	col_to_item_id map[int]string 
 	similarity [][]float64
 	user_id_to_actions map[string][]string 
+	user_id_to_actions_map map[string]map[string]int
 	item_id_to_name map[string]string 
-	
+	item_id_to_n_rec map[string]int
+	item_id_to_n_acted map[string]int 
 }
 
 func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request) {
@@ -64,6 +67,16 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 		} else {
 			recommender.user_id_to_actions[k] = v
 		}
+
+		_, ok = recommender.user_id_to_actions_map[k]
+		if !ok {
+			recommender.user_id_to_actions_map[k] = map[string]int {}
+		}
+
+		for _, item_id := range v {
+			recommender.item_id_to_n_acted[item_id] += 1
+			recommender.user_id_to_actions_map[k][item_id] += 1
+		}
 	}
 	log.Printf("%suser_id_to_actions updated %s\n", GREEN, NO_COLOR)
 }
@@ -94,9 +107,27 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	log.Printf("User Actions : %v\n", user_actions)
 
+	user_actions_map, _ := recommender.user_id_to_actions_map[user_id]
+	log.Printf("User Actions Set: %v\n", user_actions_map)
+
 	for _, action := range user_actions {
 		for i := 0; i < len(recommender.item_id_to_col); i++ {
 			scores[i] += recommender.similarity[recommender.item_id_to_col[action]][i]
+		}
+	}
+
+	log.Printf("%sItem id => times recommended:%s %v", YELLOW, NO_COLOR, recommender.item_id_to_n_rec)
+
+	log.Printf("%sItem id => times acted:%s %v", YELLOW, NO_COLOR, recommender.item_id_to_n_acted)
+
+	// Rebuilding this is probably not very efficient 
+	item_id_to_hotness := calc_hotness_scores(recommender.item_id_to_n_acted, recommender.item_id_to_n_rec)
+
+	for item_id, hotness_score := range item_id_to_hotness {
+		_, ok := recommender.user_id_to_actions_map[user_id][item_id]
+		if !ok {
+			// User have not seen this item we can bump it up 
+			scores[recommender.item_id_to_col[item_id]] += hotness_score
 		}
 	}
 
@@ -115,6 +146,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 
 	for _, item_id := range recs {
 		log.Printf("%s", recommender.item_id_to_name[item_id])
+		recommender.item_id_to_n_rec[item_id] += 1
 	}
 
 	fmt.Fprint(w, string(recs_json))
@@ -151,7 +183,21 @@ func main() {
 
 	recommender.user_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
 
+	recommender.user_id_to_actions_map = map[string]map[string]int {}
+	for user_id, actions := range recommender.user_id_to_actions {
+		_, ok := recommender.user_id_to_actions_map[user_id]
+		if !ok {
+			recommender.user_id_to_actions_map[user_id] = map[string]int {}
+		}
+		for _, item_id := range actions {
+			recommender.user_id_to_actions_map[user_id][item_id] += 1
+		}
+	}
+
 	recommender.item_id_to_name = load_item_id_to_name(fmt.Sprintf("./%s/item_id_to_name.json", folder))
+
+	recommender.item_id_to_n_rec = map[string]int {}
+	recommender.item_id_to_n_acted = map[string]int {}
 
 	log.Printf("%sitem_id => name%s\n", YELLOW, NO_COLOR)
 	for k, v := range recommender.item_id_to_name {
@@ -163,7 +209,6 @@ func main() {
 	http.HandleFunc("/update", recommender.update_user_id_to_actions)
 	http.HandleFunc("/get_recs", recommender.make_recs)
 	http.ListenAndServe("localhost:8000", nil)
-	
 }
 
 func load_item_id_to_col(file_address string) map[string]int {
@@ -214,5 +259,20 @@ func load_item_id_to_name(file_address string) map[string]string {
 	
 	json.Unmarshal(f, &item_id_to_name)
 	return item_id_to_name
+}
+
+func calc_hotness_scores(item_id_to_n_acted, item_id_to_n_rec map[string]int) map[string]float64 {
+	item_id_to_hotness := map[string]float64 {}
+	for item_id, n_acted := range item_id_to_n_acted {
+		n_rec, ok := item_id_to_n_rec[item_id]
+		if !ok || n_rec == 0 {
+			item_id_to_hotness[item_id] = 1.0;
+		} else {
+			score_1 := float64(n_acted) / float64(n_rec)
+			score := math.Min(score_1, 1.0)
+			item_id_to_hotness[item_id] = score
+		}		
+	}
+	return item_id_to_hotness
 }
 
