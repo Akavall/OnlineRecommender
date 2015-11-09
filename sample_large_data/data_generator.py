@@ -11,6 +11,12 @@ def make_item_id_to_col():
     with open("item_id_to_col.json", "w") as f:
         json.dump(item_id_to_col, f)
 
+def make_item_id_to_name():
+    item_id_to_name = {item_id: "name_{}".format(item_id) for item_id in ITEM_IDS}
+    with open("item_id_to_name.json", "w") as f:
+        json.dump(item_id_to_name, f)
+    
+
 def make_sim_matrix():
     temp = np.random.uniform(0,1, (N_ITEMS, N_ITEMS))
     # creates symmetrical matrix with diagonal 0 of zeros 
@@ -27,6 +33,7 @@ def make_user_id_to_actions():
 
 if __name__ == "__main__":
     make_item_id_to_col()
+    make_item_id_to_name()
     make_sim_matrix()
     make_user_id_to_actions()
 

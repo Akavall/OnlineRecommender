@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"os"
 	"math"
+	"sync"
 
 	"github.com/Akavall/OnlineRecommender/utilities"
 
@@ -28,6 +29,7 @@ const NO_COLOR = "\033[0m"
 
 
 type Recommender struct {
+	*sync.Mutex 
 	item_id_to_col map[string]int
 	col_to_item_id map[int]string 
 	similarity [][]float64
@@ -39,8 +41,8 @@ type Recommender struct {
 }
 
 func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request) {
-
-
+	recommender.Lock()
+	defer recommender.Unlock()
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		panic(err)
@@ -82,7 +84,8 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 }
 
 func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
-
+	recommender.Lock()
+	recommender.Unlock()
 	// started parsing input 
 	err := r.ParseForm()
 	if err != nil {
