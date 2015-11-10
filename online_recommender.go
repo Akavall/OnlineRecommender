@@ -40,8 +40,7 @@ type Recommender struct {
 }
 
 func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter, r *http.Request) {
-	recommender.mutex.Lock()
-	defer recommender.mutex.Unlock()
+
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		panic(err)
@@ -60,6 +59,9 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 	if err != nil {
 		panic(err)
 	}
+
+	recommender.mutex.Lock()
+	defer recommender.mutex.Unlock()
 
 	for k, v := range new_data {
 		_, ok := recommender.user_id_to_actions[k]
@@ -83,8 +85,6 @@ func (recommender *Recommender) update_user_id_to_actions (w http.ResponseWriter
 }
 
 func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request) {
-	recommender.mutex.Lock()
-	defer recommender.mutex.Unlock()
 
 	log.Printf("Set up mutexes")
 	// started parsing input 
@@ -107,12 +107,16 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	// done parsing input
 
 	scores := make([]float64, len(recommender.item_id_to_col))
+
+	recommender.mutex.Lock()
 	user_actions, _ := recommender.user_id_to_actions[user_id]
 
 	log.Printf("User Actions : %v\n", user_actions)
 
 	user_actions_map, _ := recommender.user_id_to_actions_map[user_id]
 	log.Printf("User Actions Set: %v\n", user_actions_map)
+	recommender.mutex.Unlock()
+
 
 	for _, action := range user_actions {
 		for i := 0; i < len(recommender.item_id_to_col); i++ {
@@ -128,7 +132,7 @@ func (recommender *Recommender) make_recs(w http.ResponseWriter, r *http.Request
 	item_id_to_hotness := calc_hotness_scores(recommender.item_id_to_n_acted, recommender.item_id_to_n_rec)
 
 	for item_id, hotness_score := range item_id_to_hotness {
-		_, ok := recommender.user_id_to_actions_map[user_id][item_id]
+		_, ok := user_actions_map[item_id]
 		if !ok {
 			// User have not seen this item we can bump it up 
 			scores[recommender.item_id_to_col[item_id]] += hotness_score
