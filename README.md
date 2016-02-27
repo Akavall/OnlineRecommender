@@ -1,3 +1,9 @@
+To start a run
+
+```
+go run online_recommender.go -folder=./sample_data -verbose=true
+```
+
 Possible usage using Python's `requests`.
 
 ```
