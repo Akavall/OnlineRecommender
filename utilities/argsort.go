@@ -1,4 +1,4 @@
-package argsort
+package utilities
 
 import (
 	"sort"
