@@ -9,7 +9,7 @@ import (
 	"log"
 	"sync"
 	"runtime"
-	"os"
+	"flag"
 
 	"github.com/Akavall/OnlineRecommender/utilities"
 
@@ -27,7 +27,13 @@ const NO_COLOR = "\033[0m"
 
 func main() {
 	runtime.GOMAXPROCS(4)
-	folder := os.Args[1]
+	folder_string_ptr := flag.String("folder", "", "a string")
+	verbose_bool_ptr := flag.Bool("verbose", false, "a bool")
+
+	flag.Parse()
+
+	folder := *folder_string_ptr
+	verbose := *verbose_bool_ptr
 
 	log.Printf("Starting to load data from: %s\n", folder)
 
@@ -42,14 +48,16 @@ func main() {
 
 	recommender.Similarity = load_sim_matrix(fmt.Sprintf("./%s/similarity.json", folder))
 
-	fmt.Printf("%sSimilarity:%s\n", YELLOW, NO_COLOR)
-	fmt.Printf("   ")
-	for i := 0; i < len(recommender.Col_to_item_id); i++ {
-		fmt.Printf("%s ", recommender.Col_to_item_id[i])
-	}
-	fmt.Println("")
-	for i, row_sim := range recommender.Similarity {
-		fmt.Printf("%s %v\n", recommender.Col_to_item_id[i], row_sim)
+	if verbose {
+		fmt.Printf("%sSimilarity:%s\n", YELLOW, NO_COLOR)
+		fmt.Printf("   ")
+		for i := 0; i < len(recommender.Col_to_item_id); i++ {
+			fmt.Printf("%s ", recommender.Col_to_item_id[i])
+		}
+		fmt.Println("")
+		for i, row_sim := range recommender.Similarity {
+			fmt.Printf("%s %v\n", recommender.Col_to_item_id[i], row_sim)
+		}
 	}
 
 	recommender.User_id_to_actions = load_user_id_to_actions(fmt.Sprintf("./%s/user_id_to_actions.json", folder))
@@ -70,14 +78,16 @@ func main() {
 	recommender.Item_id_to_n_rec = map[string]int {}
 	recommender.Item_id_to_n_acted = map[string]int {}
 
-	log.Printf("%sitem_id => col%s\n", YELLOW, NO_COLOR)
-	for k, v := range recommender.Item_id_to_col {
-		log.Printf("%s : %d\n", k, v)
-	}
+	if verbose {
+		log.Printf("%sitem_id => col%s\n", YELLOW, NO_COLOR)
+		for k, v := range recommender.Item_id_to_col {
+			log.Printf("%s : %d\n", k, v)
+		}
 
-	log.Printf("%sitem_id => name%s\n", YELLOW, NO_COLOR)
-	for k, v := range recommender.Item_id_to_name {
-		log.Printf("%s : %s\n", k, v)
+		log.Printf("%sitem_id => name%s\n", YELLOW, NO_COLOR)
+		for k, v := range recommender.Item_id_to_name {
+			log.Printf("%s : %s\n", k, v)
+		}
 	}
 
 	log.Printf("%sDone loading the data, ready...%s\n", GREEN, NO_COLOR)
