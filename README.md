@@ -28,3 +28,9 @@ To run unit test, go to /utilities:
 go test
 ```
 
+Very naive performance test:
+
+```
+wrk -t12 -c400 -d30s http://localhost:8000/get_recs?"UserId=Bon&NRecs=3"
+```
+
